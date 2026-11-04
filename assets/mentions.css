@@ -1,0 +1,47 @@
+/* @mention autocomplete, used by the widget and the inbox. */
+.smbfb-mentions {
+	position: relative;
+	z-index: 2;
+	max-height: 220px;
+	overflow: auto;
+	margin: 4px 0 0;
+	padding: 4px;
+	border: 1px solid var(--smbfb-border, #ddd);
+	border-radius: 6px;
+	background: var(--smbfb-surface, #fff);
+	color: var(--smbfb-text, #1a1a1a);
+	list-style: none;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.smbfb-mentions[hidden] {
+	display: none;
+}
+
+.smbfb-mentions li {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	padding: 6px 8px;
+	border-radius: 4px;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.smbfb-mentions li[aria-selected="true"] {
+	background: rgba(59, 130, 246, 0.15);
+}
+
+.smbfb-mentions img {
+	border-radius: 50%;
+}
+
+.smbfb-mentions__handle,
+.smbfb-mentions__empty {
+	color: var(--smbfb-muted, #666);
+}
+
+.smbfb-mentions__empty {
+	cursor: default;
+}
