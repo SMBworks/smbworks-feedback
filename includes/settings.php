@@ -12,6 +12,7 @@ function smbfb_default_settings() {
 		'visibility'          => 'everyone',
 		'button_label'        => '',
 		'position'            => 'right',
+		'types'               => array(),
 		'notify_emails'       => '',
 		'notify_author'       => 1,
 		'delete_on_uninstall' => 0,
@@ -24,19 +25,55 @@ function smbfb_setting( $key ) {
 }
 
 /**
- * Feedback types offered in the widget. Keys are stored; labels are shown.
+ * Types used until Settings → Feedback types is filled in.
+ */
+function smbfb_default_types() {
+	return array(
+		'correction' => __( 'Correction', 'smbworks-feedback' ),
+		'bug'        => __( 'Bug / issue', 'smbworks-feedback' ),
+		'suggestion' => __( 'Suggestion', 'smbworks-feedback' ),
+		'question'   => __( 'Question', 'smbworks-feedback' ),
+		'praise'     => __( 'Something I like', 'smbworks-feedback' ),
+	);
+}
+
+/**
+ * Feedback types offered in the widget, in order. Keys are stored with each item; labels are shown.
  */
 function smbfb_types() {
-	return apply_filters(
-		'smbfb_types',
-		array(
-			'correction' => __( 'Correction', 'smbworks-feedback' ),
-			'bug'        => __( 'Bug / issue', 'smbworks-feedback' ),
-			'suggestion' => __( 'Suggestion', 'smbworks-feedback' ),
-			'question'   => __( 'Question', 'smbworks-feedback' ),
-			'praise'     => __( 'Something I like', 'smbworks-feedback' ),
-		)
-	);
+	$saved = smbfb_setting( 'types' );
+	return apply_filters( 'smbfb_types', $saved ? $saved : smbfb_default_types() );
+}
+
+/**
+ * Label for a stored type key, including keys since removed from the settings.
+ */
+function smbfb_type_label( $key ) {
+	$types = smbfb_types();
+	return $types[ $key ] ?? ucfirst( str_replace( array( '-', '_' ), ' ', $key ) );
+}
+
+/**
+ * Parse the settings textarea: one type per line, "key | Label" or just "Label" (key made from the label).
+ *
+ * @return array<string, string> Up to 20 types; empty when nothing usable was entered.
+ */
+function smbfb_parse_types( $text ) {
+	$types = array();
+	foreach ( preg_split( '/\r\n|\r|\n/', (string) $text ) as $line ) {
+		$parts = array_map( 'trim', explode( '|', $line, 2 ) );
+		$label = sanitize_text_field( $parts[1] ?? $parts[0] );
+		$key   = isset( $parts[1] ) && '' !== $parts[0] ? wp_strip_all_tags( $parts[0] ) : $label;
+		$key   = substr( sanitize_key( str_replace( ' ', '-', remove_accents( $key ) ) ), 0, 20 );
+		if ( '' === $key || '' === $label || isset( $types[ $key ] ) ) {
+			continue;
+		}
+		$types[ $key ] = mb_substr( $label, 0, 60 );
+		if ( count( $types ) >= 20 ) {
+			break;
+		}
+	}
+	return $types;
 }
 
 function smbfb_visibility_choices() {
@@ -46,6 +83,18 @@ function smbfb_visibility_choices() {
 		'reviewers' => __( 'Feedback reviewers only', 'smbworks-feedback' ),
 		'nobody'    => __( 'Nobody (widget off)', 'smbworks-feedback' ),
 	);
+}
+
+/**
+ * Textarea from the form, or an already-saved array (update_option() and WP-CLI pass those).
+ */
+function smbfb_sanitize_types( $value ) {
+	if ( is_array( $value ) ) {
+		$value = implode( "\n", array_map( static fn( $key, $label ) => $key . ' | ' . $label, array_keys( $value ), $value ) );
+	}
+	$types = smbfb_parse_types( $value );
+	// Saving the defaults unchanged stores nothing, so they stay translatable.
+	return smbfb_default_types() === $types ? array() : $types;
 }
 
 function smbfb_settings_sanitize( $input ) {
@@ -58,6 +107,7 @@ function smbfb_settings_sanitize( $input ) {
 		'visibility'          => array_key_exists( $input['visibility'] ?? '', smbfb_visibility_choices() ) ? $input['visibility'] : $defaults['visibility'],
 		'button_label'        => sanitize_text_field( $input['button_label'] ?? '' ),
 		'position'            => in_array( $input['position'] ?? '', array( 'left', 'right' ), true ) ? $input['position'] : 'right',
+		'types'               => smbfb_sanitize_types( $input['types'] ?? '' ),
 		'notify_emails'       => implode( ', ', $emails ),
 		'notify_author'       => empty( $input['notify_author'] ) ? 0 : 1,
 		'delete_on_uninstall' => empty( $input['delete_on_uninstall'] ) ? 0 : 1,
@@ -124,6 +174,29 @@ function smbfb_settings_register() {
 		'smbfb_settings',
 		'smbfb_widget',
 		array( 'label_for' => 'smbfb_position' )
+	);
+
+	add_settings_field(
+		'types',
+		__( 'Feedback types', 'smbworks-feedback' ),
+		static function () {
+			$saved = smbfb_setting( 'types' );
+			$lines = array();
+			foreach ( $saved ? $saved : smbfb_default_types() as $key => $label ) {
+				$lines[] = $key . ' | ' . $label;
+			}
+			printf(
+				'<textarea class="large-text code" rows="7" name="smbfb_settings[types]" id="smbfb_types">%s</textarea>',
+				esc_textarea( implode( "\n", $lines ) )
+			);
+			echo '<p class="description">' . esc_html__( 'One per line, in the order the widget lists them: key | Label. The key is saved with each item, so change labels freely but keep keys stable. A line with only a label gets a key made from it. Up to 20 types; leave empty for the defaults.', 'smbworks-feedback' ) . '</p>';
+			if ( has_filter( 'smbfb_types' ) ) {
+				echo '<p class="description">' . esc_html__( 'Note: code on this site also changes the list through the smbfb_types filter.', 'smbworks-feedback' ) . '</p>';
+			}
+		},
+		'smbfb_settings',
+		'smbfb_widget',
+		array( 'label_for' => 'smbfb_types' )
 	);
 
 	add_settings_field(

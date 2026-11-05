@@ -282,6 +282,20 @@ function smbfb_pages() {
 	);
 }
 
+/**
+ * Types for the inbox filter: the configured ones, then any still on items after being removed from the settings.
+ */
+function smbfb_filter_types() {
+	global $wpdb;
+	$types = smbfb_types();
+	$table = smbfb_table( 'items' );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	foreach ( $wpdb->get_col( "SELECT DISTINCT type FROM $table WHERE type <> '' ORDER BY type" ) as $key ) {
+		$types[ $key ] = $types[ $key ] ?? smbfb_type_label( $key );
+	}
+	return $types;
+}
+
 function smbfb_open_count() {
 	global $wpdb;
 	$table = smbfb_table( 'items' );
@@ -307,7 +321,6 @@ function smbfb_person( $id, $name, $email ) {
  * Item as the dashboard sees it.
  */
 function smbfb_format_item( $row ) {
-	$types    = smbfb_types();
 	$resolver = $row->resolved_by ? get_userdata( $row->resolved_by ) : null;
 	$context  = json_decode( (string) $row->context, true );
 
@@ -315,7 +328,7 @@ function smbfb_format_item( $row ) {
 		'id'               => (int) $row->id,
 		'status'           => $row->status,
 		'type'             => $row->type,
-		'type_label'       => $types[ $row->type ] ?? $row->type,
+		'type_label'       => smbfb_type_label( $row->type ),
 		'comment'          => $row->comment,
 		'page_url'         => $row->page_url,
 		'page_key'         => $row->page_key,

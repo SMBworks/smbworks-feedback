@@ -319,7 +319,7 @@ function smbfb_rest_list_items( WP_REST_Request $request ) {
 			'counts' => smbfb_status_counts( $filters ),
 			'filter' => array(
 				'pages' => smbfb_pages(),
-				'types' => smbfb_types(),
+				'types' => smbfb_filter_types(),
 			),
 		)
 	);

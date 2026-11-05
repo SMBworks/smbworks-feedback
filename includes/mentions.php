@@ -170,11 +170,10 @@ function smbfb_on_item_created( $item_id ) {
 		return;
 	}
 
-	$types = smbfb_types();
 	smbfb_mail(
 		array_values( $to ),
 		/* translators: 1: feedback type, 2: page title */
-		sprintf( __( 'New feedback (%1$s) on “%2$s”', 'smbworks-feedback' ), $types[ $item->type ] ?? $item->type, smbfb_page_label( $item ) ),
+		sprintf( __( 'New feedback (%1$s) on “%2$s”', 'smbworks-feedback' ), smbfb_type_label( $item->type ), smbfb_page_label( $item ) ),
 		array(
 			/* translators: 1: name, 2: email */
 			sprintf( __( 'From: %1$s <%2$s>', 'smbworks-feedback' ), $item->author_name, $item->author_email ),

@@ -16,6 +16,7 @@ Then go to **Feedback → Settings** (needs `manage_options`):
 
 - **Show the widget to:** everyone including guests (the default), logged-in users, reviewers only, or nobody.
 - **Button label** and **position** (bottom right or bottom left).
+- **Feedback types:** one per line, in widget order, as `key | Label` (a line with only a label gets a key made from it), up to 20. The key is stored with each item, so labels can change freely but keys should stay stable. Items whose type was later removed keep it: the inbox shows a label made from the key and still offers it in the type filter. Leave the box empty to use the defaults (Correction, Bug / issue, Suggestion, Question, Something I like).
 - **New feedback goes to:** comma-separated addresses. Leave it empty to email only the people who are @mentioned.
 - **Replies:** email the person who left the feedback when someone replies. On by default; guests get the reply text and the page link.
 - **Uninstall:** whether deleting the plugin also drops its tables and settings. Off by default.
@@ -71,7 +72,7 @@ To change the schema, edit `smbfb_schema_sql()`, bump `SMBFB_DB_VERSION`, and pu
 
 | Filter | Use |
 | --- | --- |
-| `smbfb_types` | Feedback types: key => label |
+| `smbfb_types` | Feedback types, key => label; runs after the setting, so code can add to or override it |
 | `smbfb_widget_allowed` | Bool: show the widget to the current visitor |
 | `smbfb_reviewer_roles` | Roles given the capability on install |
 | `smbfb_allowed_hosts` | Hosts feedback URLs may use |
