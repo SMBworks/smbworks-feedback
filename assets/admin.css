@@ -190,6 +190,7 @@
 
 .smbfb-type,
 .smbfb-status,
+.smbfb-priority,
 .smbfb-guest {
 	display: inline-block;
 	padding: 1px 8px;
@@ -225,6 +226,18 @@
 .smbfb-type--praise {
 	background: #edfaef;
 	color: #1a5e2a;
+}
+
+.smbfb-priority--high {
+	background: #d63638;
+	color: #fff;
+	font-weight: 600;
+}
+
+.smbfb-priority--low {
+	border: 1px dashed #c3c4c7;
+	background: none;
+	color: var(--smbfb-muted);
 }
 
 .smbfb-status--open {
@@ -288,6 +301,53 @@
 	gap: 6px;
 	grid-column: 2;
 	grid-row: 1 / span 2;
+}
+
+.smbfb-priority-control {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	grid-column: 1 / -1;
+	margin-top: 4px;
+}
+
+.smbfb-priority-control__label {
+	margin-right: 2px;
+	color: var(--smbfb-muted);
+	font-size: 12px;
+}
+
+.smbfb-priority-control__option {
+	padding: 2px 10px;
+	border: 1px solid var(--smbfb-border);
+	border-radius: 12px;
+	background: #fff;
+	color: #1d2327;
+	font-size: 12px;
+	line-height: 20px;
+	cursor: pointer;
+}
+
+.smbfb-priority-control__option:hover {
+	border-color: var(--smbfb-accent);
+}
+
+.smbfb-priority-control__option:focus-visible {
+	outline: 2px solid var(--smbfb-accent);
+	outline-offset: 1px;
+}
+
+.smbfb-priority-control__option[aria-pressed="true"] {
+	border-color: var(--smbfb-accent);
+	background: var(--smbfb-accent);
+	color: #fff;
+	cursor: default;
+}
+
+.smbfb-priority-control__option--high[aria-pressed="true"] {
+	border-color: #d63638;
+	background: #d63638;
 }
 
 .smbfb-original {

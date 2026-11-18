@@ -28,7 +28,8 @@ Then go to **Feedback → Settings** (needs `manage_options`):
 | Leave feedback | yes, enters name and email (remembered in `localStorage`) | yes, name and email filled from the account, read-only | yes |
 | @mention autocomplete in the widget | no (typed mentions still match) | no | yes |
 | Can be @mentioned | no | no | yes |
-| Inbox: read, reply, resolve, archive | no | no | yes |
+| Inbox: read, reply, resolve, archive, set priority | no | no | yes |
+| Dashboard widget | no | no | yes |
 
 To make a client a reviewer, give their role the capability, e.g. `wp cap add author smbfb_manage_feedback`, or add roles with the `smbfb_reviewer_roles` filter before activation.
 
@@ -47,7 +48,7 @@ To make a client a reviewer, give their role the capability, e.g. `wp cap add au
 
 Three tables, `{prefix}smbfb_items`, `smbfb_replies` and `smbfb_mentions`, are created with `dbDelta`. The schema version is kept in the `smbfb_db_version` option and checked on `plugins_loaded`. That way updates copied over the folder, and sites on a network activation, upgrade without reactivating.
 
-**items:** status (`open` / `resolved` / `archived`), type, comment, full page URL plus a normalised `page_key` (path only, used for grouping and filtering), page title, post ID, author (user ID or guest name and email), IP hash, context JSON (viewport, screen, pixel ratio, scroll, user agent, language, colour scheme), reply count, who closed it and when, and created / updated / last-activity times (UTC).
+**items:** status (`open` / `resolved` / `archived`), type, priority (2 high, 1 normal, 0 low; numeric so it sorts), comment, full page URL plus a normalised `page_key` (path only, used for grouping and filtering), page title, post ID, author (user ID or guest name and email), IP hash, context JSON (viewport, screen, pixel ratio, scroll, user agent, language, colour scheme), reply count, who closed it and when, and created / updated / last-activity times (UTC).
 
 **replies:** item ID, parent ID (threads), author, body, time.
 
@@ -60,11 +61,19 @@ To change the schema, edit `smbfb_schema_sql()`, bump `SMBFB_DB_VERSION`, and pu
 | Route | Who | What |
 | --- | --- | --- |
 | `POST /items` | whoever the widget is shown to | submit feedback |
-| `GET /items` | reviewers | list; `status`, `page_key`, `type`, `mentioned`, `search`, `page`, `per_page`; includes status counts and filter options |
+| `GET /items` | reviewers | list; `status`, `page_key`, `type`, `priority`, `mentioned`, `search`, `orderby` (`activity` or `priority`), `page`, `per_page`; includes status counts and filter options |
 | `GET /items/{id}` | reviewers | item and replies |
-| `POST /items/{id}` | reviewers | `status`: open, resolved or archived |
+| `POST /items/{id}` | reviewers | `status` (open, resolved, archived) and/or `priority` (high, normal, low) |
 | `POST /items/{id}/replies` | reviewers | `body`, optional `parent_id` |
 | `GET /users?search=` | reviewers | reviewers for @mention autocomplete |
+
+## Priority
+
+Every item is High, Normal or Low. New items start as Normal, and items from before schema 2 were upgraded to Normal. In the inbox, the Priority buttons under the page title change it; choosing Normal resets it. High and Low show as badges in the list (Normal shows none). The toolbar adds a priority filter and a sort: Latest activity (default) or Priority first.
+
+## Dashboard widget
+
+Reviewers get a **Feedback** box on the wp-admin Dashboard with three counts: open items, open High priority items, and open items that mention them. Each count opens the inbox already filtered. Below the counts are the open items that need attention first, High priority first and then by latest activity (5 by default; change it with `smbfb_dashboard_items`). Each one links straight to its thread. Like any Dashboard box, it can be hidden or moved under Screen Options.
 
 ## Hooks
 
@@ -78,8 +87,9 @@ To change the schema, edit `smbfb_schema_sql()`, bump `SMBFB_DB_VERSION`, and pu
 | `smbfb_allowed_hosts` | Hosts feedback URLs may use |
 | `smbfb_guest_rate_limit` | Guest submissions per 10 minutes |
 | `smbfb_mail_headers` | Headers for notification emails |
+| `smbfb_dashboard_items` | How many open items the Dashboard widget lists (default 5) |
 
-**Actions:** `smbfb_item_created`, `smbfb_reply_created`, `smbfb_status_changed`.
+**Actions:** `smbfb_item_created`, `smbfb_reply_created`, `smbfb_status_changed`, `smbfb_priority_changed` (item ID, new, old, user ID).
 
 **Styling:** override the `--smbfb-*` custom properties on `.smbfb`; there's a dark variant for `prefers-color-scheme: dark`.
 

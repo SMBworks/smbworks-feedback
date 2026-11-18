@@ -15,13 +15,15 @@
 		status: 'open',
 		page_key: '',
 		type: '',
+		priority: '',
+		orderby: 'activity',
 		mentioned: false,
 		search: '',
 		page: 1,
 		items: [],
 		pages: 1,
 		counts: {},
-		filter: { pages: [], types: {} },
+		filter: { pages: [], types: {}, priorities: {} },
 		selected: 0,
 		detail: null,
 		replyTo: 0,
@@ -118,6 +120,8 @@
 			status: state.status,
 			page_key: state.page_key,
 			type: state.type,
+			priority: state.priority,
+			orderby: 'activity' === state.orderby ? '' : state.orderby,
 			mentioned: state.mentioned ? 1 : '',
 			search: state.search,
 			page: state.page,
@@ -166,6 +170,15 @@
 
 	function setStatus( status ) {
 		api( { path: base + '/items/' + state.selected, method: 'POST', data: { status } } ).then( afterChange ).catch( fail );
+	}
+
+	function setPriority( priority ) {
+		api( { path: base + '/items/' + state.selected, method: 'POST', data: { priority } } ).then( afterChange ).catch( fail );
+	}
+
+	function priorityBadge( item ) {
+		// Normal is the default, so only the exceptions get a badge.
+		return 'normal' === item.priority ? null : el( 'span', { className: 'smbfb-priority smbfb-priority--' + item.priority }, item.priority_label );
 	}
 
 	function sendReply( form, thenStatus ) {
@@ -266,6 +279,36 @@
 		);
 		typeSelect.value = state.type;
 
+		const prioritySelect = el(
+			'select',
+			{
+				'aria-label': __( 'Filter by priority', 'smbworks-feedback' ),
+				onchange( event ) {
+					state.priority = event.target.value;
+					state.page = 1;
+					loadList();
+				},
+			},
+			el( 'option', { value: '' }, __( 'All priorities', 'smbworks-feedback' ) ),
+			Object.entries( state.filter.priorities ).map( ( [ key, label ] ) => el( 'option', { value: key }, label ) )
+		);
+		prioritySelect.value = state.priority;
+
+		const sortSelect = el(
+			'select',
+			{
+				'aria-label': __( 'Sort', 'smbworks-feedback' ),
+				onchange( event ) {
+					state.orderby = event.target.value;
+					state.page = 1;
+					loadList();
+				},
+			},
+			el( 'option', { value: 'activity' }, __( 'Latest activity', 'smbworks-feedback' ) ),
+			el( 'option', { value: 'priority' }, __( 'Priority first', 'smbworks-feedback' ) )
+		);
+		sortSelect.value = state.orderby;
+
 		let timer = 0;
 		const searchInput = el( 'input', {
 			type: 'search',
@@ -298,7 +341,7 @@
 			__( 'Mentions me', 'smbworks-feedback' )
 		);
 
-		bar.replaceChildren( tabs, el( 'div', { className: 'smbfb-filters' }, pageSelect, typeSelect, mine, searchInput ) );
+		bar.replaceChildren( tabs, el( 'div', { className: 'smbfb-filters' }, pageSelect, typeSelect, prioritySelect, sortSelect, mine, searchInput ) );
 		if ( hadFocus ) {
 			searchInput.focus();
 			searchInput.setSelectionRange( searchInput.value.length, searchInput.value.length );
@@ -330,6 +373,7 @@
 								'span',
 								{ className: 'smbfb-row__top' },
 								el( 'span', { className: 'smbfb-type smbfb-type--' + item.type }, item.type_label ),
+								priorityBadge( item ),
 								el( 'span', { className: 'smbfb-row__page' }, pageLabel( item ) ),
 								time( item.last_activity_at )
 							),
@@ -381,6 +425,26 @@
 			buttons.push( button( __( 'Archive', 'smbworks-feedback' ), 'archived', false ) );
 		}
 		return buttons;
+	}
+
+	function priorityControl( item ) {
+		return el(
+			'div',
+			{ className: 'smbfb-priority-control', role: 'group', 'aria-label': __( 'Priority', 'smbworks-feedback' ) },
+			el( 'span', { className: 'smbfb-priority-control__label', 'aria-hidden': 'true' }, __( 'Priority', 'smbworks-feedback' ) ),
+			Object.entries( state.filter.priorities ).map( ( [ key, label ] ) =>
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'smbfb-priority-control__option smbfb-priority-control__option--' + key,
+						'aria-pressed': key === item.priority ? 'true' : 'false',
+						onclick: () => key !== item.priority && setPriority( key ),
+					},
+					label
+				)
+			)
+		);
 	}
 
 	function contextTable( item ) {
@@ -529,9 +593,10 @@
 			el(
 				'header',
 				{ className: 'smbfb-detail__head' },
-				el( 'div', { className: 'smbfb-detail__badges' }, el( 'span', { className: 'smbfb-type smbfb-type--' + item.type }, item.type_label ), el( 'span', { className: 'smbfb-status smbfb-status--' + item.status }, config.statuses[ item.status ] ) ),
+				el( 'div', { className: 'smbfb-detail__badges' }, el( 'span', { className: 'smbfb-type smbfb-type--' + item.type }, item.type_label ), el( 'span', { className: 'smbfb-status smbfb-status--' + item.status }, config.statuses[ item.status ] ), priorityBadge( item ) ),
 				el( 'h2', {}, el( 'a', { href: item.page_url, target: '_blank', rel: 'noopener' }, pageLabel( item ) ) ),
-				el( 'div', { className: 'smbfb-detail__actions' }, statusButtons( item ) )
+				el( 'div', { className: 'smbfb-detail__actions' }, statusButtons( item ) ),
+				priorityControl( item )
 			),
 			el(
 				'article',
@@ -573,6 +638,15 @@
 	renderShell();
 	renderDetail();
 	const start = readHash();
+	// Links from the Dashboard widget arrive with filters: #priority=high, #mentioned=1.
+	const startFilters = new URLSearchParams( window.location.hash.slice( 1 ) );
+	if ( config.statuses[ startFilters.get( 'status' ) ] ) {
+		state.status = startFilters.get( 'status' );
+	}
+	[ 'priority', 'type', 'page_key' ].forEach( function ( key ) {
+		state[ key ] = startFilters.get( key ) || state[ key ];
+	} );
+	state.mentioned = '1' === startFilters.get( 'mentioned' );
 	loadList().then( function () {
 		if ( start.item ) {
 			select( start.item, start.reply );

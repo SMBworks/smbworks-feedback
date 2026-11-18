@@ -13,6 +13,28 @@ function smbfb_statuses() {
 	);
 }
 
+/**
+ * Priorities, highest first. Stored as a number so lists can sort on it.
+ *
+ * @return array<string, array{0: int, 1: string}> slug => [ stored value, label ].
+ */
+function smbfb_priorities() {
+	return array(
+		'high'   => array( 2, __( 'High', 'smbworks-feedback' ) ),
+		'normal' => array( 1, __( 'Normal', 'smbworks-feedback' ) ),
+		'low'    => array( 0, __( 'Low', 'smbworks-feedback' ) ),
+	);
+}
+
+function smbfb_priority_slug( $value ) {
+	foreach ( smbfb_priorities() as $slug => list( $stored ) ) {
+		if ( (int) $value === $stored ) {
+			return $slug;
+		}
+	}
+	return 'normal';
+}
+
 function smbfb_now() {
 	return current_time( 'mysql', true );
 }
@@ -171,9 +193,38 @@ function smbfb_set_status( $item_id, $status, $user_id ) {
 }
 
 /**
+ * Set High, Normal or Low. Setting Normal is how a priority is reset.
+ */
+function smbfb_set_priority( $item_id, $priority, $user_id ) {
+	global $wpdb;
+
+	$priorities = smbfb_priorities();
+	if ( ! isset( $priorities[ $priority ] ) ) {
+		return new WP_Error( 'smbfb_bad_priority', __( 'Unknown priority.', 'smbworks-feedback' ), array( 'status' => 400 ) );
+	}
+
+	$item = smbfb_get_item( $item_id );
+	$old  = smbfb_priority_slug( $item->priority );
+	if ( $old === $priority ) {
+		return true;
+	}
+
+	$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		smbfb_table( 'items' ),
+		array(
+			'priority'   => $priorities[ $priority ][0],
+			'updated_at' => smbfb_now(),
+		),
+		array( 'id' => (int) $item_id )
+	);
+	do_action( 'smbfb_priority_changed', (int) $item_id, $priority, $old, (int) $user_id );
+	return true;
+}
+
+/**
  * WHERE clause shared by the list and its counts.
  *
- * @param array $args page_key, type, mentioned (user ID), search.
+ * @param array $args page_key, type, priority (slug), mentioned (user ID), search.
  * @return array{0: string, 1: array} SQL fragment and its placeholders' values.
  */
 function smbfb_where( $args ) {
@@ -188,6 +239,10 @@ function smbfb_where( $args ) {
 	if ( ! empty( $args['type'] ) ) {
 		$sql     .= ' AND i.type = %s';
 		$values[] = $args['type'];
+	}
+	if ( ! empty( $args['priority'] ) && isset( smbfb_priorities()[ $args['priority'] ] ) ) {
+		$sql     .= ' AND i.priority = %d';
+		$values[] = smbfb_priorities()[ $args['priority'] ][0];
 	}
 	if ( ! empty( $args['mentioned'] ) ) {
 		$sql     .= ' AND i.id IN ( SELECT item_id FROM ' . smbfb_table( 'mentions' ) . ' WHERE user_id = %d )';
@@ -210,7 +265,7 @@ function smbfb_prepare( $sql, $values ) {
 }
 
 /**
- * @param array $args status, page_key, type, mentioned, search, page, per_page.
+ * @param array $args status, page_key, type, priority, mentioned, search, orderby (activity|priority), page, per_page.
  * @return array{items: array, total: int}
  */
 function smbfb_query_items( $args ) {
@@ -225,12 +280,13 @@ function smbfb_query_items( $args ) {
 	$per_page = max( 1, min( 100, (int) ( $args['per_page'] ?? 30 ) ) );
 	$offset   = ( max( 1, (int) ( $args['page'] ?? 1 ) ) - 1 ) * $per_page;
 	$table    = smbfb_table( 'items' );
+	$order    = 'priority' === ( $args['orderby'] ?? '' ) ? 'i.priority DESC, ' : '';
 
 	// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders
 	$total = (int) $wpdb->get_var( smbfb_prepare( "SELECT COUNT(*) FROM $table i WHERE $where", $values ) );
 	$rows  = $wpdb->get_results(
 		$wpdb->prepare(
-			"SELECT * FROM $table i WHERE $where ORDER BY i.last_activity_at DESC, i.id DESC LIMIT %d OFFSET %d",
+			"SELECT * FROM $table i WHERE $where ORDER BY {$order}i.last_activity_at DESC, i.id DESC LIMIT %d OFFSET %d",
 			array_merge( $values, array( $per_page, $offset ) )
 		)
 	);
@@ -329,6 +385,8 @@ function smbfb_format_item( $row ) {
 		'status'           => $row->status,
 		'type'             => $row->type,
 		'type_label'       => smbfb_type_label( $row->type ),
+		'priority'         => smbfb_priority_slug( $row->priority ),
+		'priority_label'   => smbfb_priorities()[ smbfb_priority_slug( $row->priority ) ][1],
 		'comment'          => $row->comment,
 		'page_url'         => $row->page_url,
 		'page_key'         => $row->page_key,

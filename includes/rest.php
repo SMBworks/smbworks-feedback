@@ -92,9 +92,19 @@ function smbfb_rest_routes() {
 						'type'    => 'string',
 						'default' => '',
 					),
+					'priority'  => array(
+						'type'    => 'string',
+						'enum'    => array_merge( array( '' ), array_keys( smbfb_priorities() ) ),
+						'default' => '',
+					),
 					'mentioned' => array(
 						'type'    => 'boolean',
 						'default' => false,
+					),
+					'orderby'   => array(
+						'type'    => 'string',
+						'enum'    => array( 'activity', 'priority' ),
+						'default' => 'activity',
 					),
 					'search'    => array(
 						'type'              => 'string',
@@ -132,10 +142,13 @@ function smbfb_rest_routes() {
 				'callback'            => 'smbfb_rest_update_item',
 				'permission_callback' => $manage,
 				'args'                => $id_arg + array(
-					'status' => array(
-						'type'     => 'string',
-						'enum'     => array_keys( smbfb_statuses() ),
-						'required' => true,
+					'status'   => array(
+						'type' => 'string',
+						'enum' => array_keys( smbfb_statuses() ),
+					),
+					'priority' => array(
+						'type' => 'string',
+						'enum' => array_keys( smbfb_priorities() ),
 					),
 				),
 			),
@@ -300,12 +313,14 @@ function smbfb_rest_list_items( WP_REST_Request $request ) {
 	$filters = array(
 		'page_key'  => $request['page_key'],
 		'type'      => $request['type'],
+		'priority'  => $request['priority'],
 		'mentioned' => $request['mentioned'] ? get_current_user_id() : 0,
 		'search'    => $request['search'],
 	);
 	$result  = smbfb_query_items(
 		$filters + array(
 			'status'   => $request['status'],
+			'orderby'  => $request['orderby'],
 			'page'     => $request['page'],
 			'per_page' => $request['per_page'],
 		)
@@ -318,8 +333,9 @@ function smbfb_rest_list_items( WP_REST_Request $request ) {
 			'pages'  => (int) ceil( $result['total'] / $request['per_page'] ),
 			'counts' => smbfb_status_counts( $filters ),
 			'filter' => array(
-				'pages' => smbfb_pages(),
-				'types' => smbfb_filter_types(),
+				'pages'      => smbfb_pages(),
+				'types'      => smbfb_filter_types(),
+				'priorities' => array_map( static fn( $p ) => $p[1], smbfb_priorities() ),
 			),
 		)
 	);
@@ -351,8 +367,22 @@ function smbfb_rest_update_item( WP_REST_Request $request ) {
 	if ( is_wp_error( $item ) ) {
 		return $item;
 	}
-	$result = smbfb_set_status( $item->id, $request['status'], get_current_user_id() );
-	return is_wp_error( $result ) ? $result : smbfb_rest_item_response( $item->id );
+	if ( ! isset( $request['status'] ) && ! isset( $request['priority'] ) ) {
+		return new WP_Error( 'smbfb_nothing_to_update', __( 'Send a status or a priority.', 'smbworks-feedback' ), array( 'status' => 400 ) );
+	}
+
+	foreach ( array(
+		'status'   => 'smbfb_set_status',
+		'priority' => 'smbfb_set_priority',
+	) as $field => $setter ) {
+		if ( isset( $request[ $field ] ) ) {
+			$result = $setter( $item->id, $request[ $field ], get_current_user_id() );
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+		}
+	}
+	return smbfb_rest_item_response( $item->id );
 }
 
 function smbfb_rest_create_reply( WP_REST_Request $request ) {

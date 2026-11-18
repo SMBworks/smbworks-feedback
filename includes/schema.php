@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SMBFB_DB_VERSION', 1 );
+define( 'SMBFB_DB_VERSION', 2 );
 
 /**
  * Table names, keyed by short name.
@@ -31,6 +31,7 @@ function smbfb_schema_sql() {
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   status varchar(20) NOT NULL DEFAULT 'open',
   type varchar(20) NOT NULL DEFAULT '',
+  priority tinyint(3) unsigned NOT NULL DEFAULT 1,
   comment longtext NOT NULL,
   page_url text NOT NULL,
   page_key varchar(191) NOT NULL DEFAULT '',
@@ -49,6 +50,7 @@ function smbfb_schema_sql() {
   last_activity_at datetime NOT NULL,
   PRIMARY KEY  (id),
   KEY status_activity (status,last_activity_at),
+  KEY status_priority (status,priority,last_activity_at),
   KEY page_key (page_key),
   KEY type (type),
   KEY author_id (author_id),
@@ -87,6 +89,7 @@ function smbfb_schema_sql() {
  * @return array<int, callable>
  */
 function smbfb_migrations() {
+	// 2: priority column. Its default (normal) covers existing rows, so dbDelta is enough.
 	return array();
 }
 

@@ -1,0 +1,127 @@
+/* Dashboard → Feedback widget. */
+.smbfb-dash__stats {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 8px;
+	margin: 0 0 12px;
+}
+
+.smbfb-dash__stats li {
+	margin: 0;
+}
+
+.smbfb-dash__stats a {
+	display: block;
+	padding: 10px 8px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	color: #1d2327;
+	text-align: center;
+	text-decoration: none;
+}
+
+.smbfb-dash__stats a:hover,
+.smbfb-dash__stats a:focus {
+	border-color: var(--wp-admin-theme-color, #2271b1);
+}
+
+.smbfb-dash__stats strong {
+	display: block;
+	font-size: 22px;
+	line-height: 1.2;
+}
+
+.smbfb-dash__stats span {
+	color: #646970;
+	font-size: 12px;
+}
+
+.smbfb-dash__stats .is-high strong {
+	color: #d63638;
+}
+
+.smbfb-dash .smbfb-dash__heading {
+	margin: 0 0 4px;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.smbfb-dash__items {
+	margin: 0 -12px;
+}
+
+.smbfb-dash__items li {
+	margin: 0;
+	border-top: 1px solid #f0f0f1;
+}
+
+.smbfb-dash__items a {
+	display: block;
+	padding: 8px 12px;
+	color: #1d2327;
+	text-decoration: none;
+}
+
+.smbfb-dash__items a:hover,
+.smbfb-dash__items a:focus {
+	background: #f6f7f7;
+}
+
+.smbfb-dash__meta {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+}
+
+.smbfb-dash__priority,
+.smbfb-dash__type {
+	flex: none;
+	padding: 0 7px;
+	border-radius: 9px;
+	background: #f0f0f1;
+	font-size: 11px;
+	line-height: 18px;
+}
+
+.smbfb-dash__priority--high {
+	background: #d63638;
+	color: #fff;
+	font-weight: 600;
+}
+
+.smbfb-dash__priority--low {
+	border: 1px dashed #c3c4c7;
+	background: none;
+	color: #646970;
+}
+
+.smbfb-dash__page {
+	min-width: 0;
+	overflow: hidden;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.smbfb-dash__comment,
+.smbfb-dash__byline {
+	display: block;
+	margin-top: 2px;
+}
+
+.smbfb-dash__byline {
+	color: #646970;
+	font-size: 12px;
+}
+
+.smbfb-dash__empty {
+	color: #646970;
+}
+
+.smbfb-dash .smbfb-dash__footer {
+	margin: 0 -12px -12px;
+	padding: 10px 12px;
+	border-top: 1px solid #f0f0f1;
+	background: #f6f7f7;
+}
