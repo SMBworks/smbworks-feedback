@@ -115,3 +115,9 @@ A dev site that symlinks the plugin from a git checkout will also see update not
 composer global require --dev wp-coding-standards/wpcs:^3 phpcompatibility/phpcompatibility-wp
 phpcs            # uses phpcs.xml.dist
 ```
+
+## License
+
+Copyright (C) 2026 SMBworks, LLC.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. It is distributed WITHOUT ANY WARRANTY; see [LICENSE](LICENSE) for the full text.
