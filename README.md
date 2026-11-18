@@ -88,10 +88,26 @@ Reviewers get a **Feedback** box on the wp-admin Dashboard with three counts: op
 | `smbfb_guest_rate_limit` | Guest submissions per 10 minutes |
 | `smbfb_mail_headers` | Headers for notification emails |
 | `smbfb_dashboard_items` | How many open items the Dashboard widget lists (default 5) |
+| `smbfb_update_repository` | `owner/name` that updates come from (default `SMBworks/smbworks-feedback`) |
+| `smbfb_update_request_args` | `wp_remote_get()` args for the GitHub API call, e.g. to add a token for a private fork |
 
 **Actions:** `smbfb_item_created`, `smbfb_reply_created`, `smbfb_status_changed`, `smbfb_priority_changed` (item ID, new, old, user ID).
 
 **Styling:** override the `--smbfb-*` custom properties on `.smbfb`; there's a dark variant for `prefers-color-scheme: dark`.
+
+## Updates and releases
+
+Sites update from this repository's GitHub Releases through the core `Update URI` header (WordPress 5.8+), with no extra library. WordPress checks twice a day, then shows the usual "update available" notice, Update button, "View details" popup (with the release notes) and auto-update toggle. "Check again" under Dashboard → Updates checks right away. The release lookup is cached for 6 hours, or 1 hour after a failed lookup, so the unauthenticated GitHub API limit is never a concern.
+
+To release:
+
+1. Bump `Version:` in the plugin header and `SMBFB_VERSION` to the same number, e.g. `1.3.0`.
+2. Commit, then tag and push: `git tag -a v1.3.0 -m "..." && git push origin main v1.3.0`.
+3. `.github/workflows/release.yml` checks that the tag matches both versions, lints the PHP, builds `smbworks-feedback.zip` (`git archive`, minus the files marked `export-ignore` in `.gitattributes`) and publishes the release with generated notes.
+
+Only published releases that have `smbworks-feedback.zip` attached are offered; drafts and pre-releases are skipped. Don't attach GitHub's "Source code" zip by hand: it unpacks into a differently named folder, and WordPress would install a second copy.
+
+A dev site that symlinks the plugin from a git checkout will also see update notices. Don't press Update there: WordPress replaces the folder, which would remove the symlink target's contents.
 
 ## Development
 

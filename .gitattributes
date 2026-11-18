@@ -1,0 +1,5 @@
+# Left out of the release zip (git archive) built by .github/workflows/release.yml.
+/.github          export-ignore
+/.gitattributes   export-ignore
+/.gitignore       export-ignore
+/phpcs.xml.dist   export-ignore

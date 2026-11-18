@@ -1,0 +1,36 @@
+# Push a tag like v1.2.0 to publish a release with smbworks-feedback.zip attached.
+# Sites running the plugin pick it up through includes/updater.php.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches the plugin version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          header=$(sed -n 's/^ \* Version: *//p' smbworks-feedback.php)
+          constant=$(sed -n "s/^define( 'SMBFB_VERSION', '\(.*\)' );/\1/p" smbworks-feedback.php)
+          echo "tag=$tag header=$header constant=$constant"
+          [ "$tag" = "$header" ] && [ "$tag" = "$constant" ] || { echo "::error::Tag v$tag doesn't match Version ($header) and SMBFB_VERSION ($constant)"; exit 1; }
+
+      - name: Lint PHP
+        run: find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+
+      - name: Build the zip
+        # The folder inside must be smbworks-feedback/ or WordPress installs a second copy.
+        run: git archive --format=zip --prefix=smbworks-feedback/ -o smbworks-feedback.zip "$GITHUB_REF_NAME"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" smbworks-feedback.zip --title "SMBworks Feedback ${GITHUB_REF_NAME#v}" --generate-notes --verify-tag
