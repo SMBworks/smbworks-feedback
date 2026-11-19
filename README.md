@@ -2,14 +2,14 @@
 
 Drop-in WordPress plugin for collecting page feedback from clients and stakeholders during a build. A floating **💬 Feedback** button opens a short form; items land in a **Feedback** inbox in wp-admin with threaded replies, @mentions and open / resolved / archived states. Works with any theme. No build step: plain JS, using `wp.apiFetch` and `wp.i18n` in the admin.
 
-Started from the Shopify feedback snippet (Sept 2026): same form, fields and look, but it saves to the site's own database instead of a webhook.
+Ported from a custom Shopify feedback snippet (Sept 2026): same form, fields and look, but it saves to the site's own database instead of a webhook.
 
 ## Install
 
 Copy or symlink this folder into `wp-content/plugins/` and activate it. Activation creates the tables and gives Administrators and Editors the `smbfb_manage_feedback` capability.
 
 ```sh
-ln -s ~/Repositories/smbworks-feedback /path/to/site/wp-content/plugins/smbworks-feedback
+ln -s ~/path/to/smbworks-feedback /path/to/site/wp-content/plugins/smbworks-feedback
 ```
 
 Then go to **Feedback → Settings** (needs `manage_options`):
